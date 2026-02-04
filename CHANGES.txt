@@ -1,0 +1,8 @@
+Author: SHADRIZZ 
+Date:   Tue Feb 03 21:51:12 2026 +0200
+
+    Update Necrosis.toc
+    20505
+
+    Massive addon overhaul to get working for TBC Anniversary
+    Includes many improvements from the old addon so it just functions better as a whole
