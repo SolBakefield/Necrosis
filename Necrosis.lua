@@ -3350,6 +3350,95 @@ local function HideList(list, parent)
 		end
 	end
 end
+
+-- Adds a gray "Middle-click to drag" hint to menu buttons
+local function AddMiddleDragTooltip(button)
+    if not button then return end
+
+    local oldOnEnter = button:GetScript("OnEnter")
+    local oldOnLeave = button:GetScript("OnLeave")
+
+    button:SetScript("OnEnter", function(self)
+        if oldOnEnter then oldOnEnter(self) end
+
+		-- Dragging globally disabled → no hint
+        if NecrosisConfig and NecrosisConfig.NoDragAll then
+            return
+        end
+		
+        if not GameTooltip:IsShown() then
+            GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+            GameTooltip:SetText(self:GetName() or "", 1, 1, 1)
+        end
+
+        GameTooltip:AddLine("Middle-click to drag", 0.65, 0.65, 0.65)
+        GameTooltip:Show()
+    end)
+
+    button:SetScript("OnLeave", function(self)
+        if oldOnLeave then oldOnLeave(self) end
+        GameTooltip:Hide()
+    end)
+end
+
+-- Allow dragging an opened menu (Pet/Buff/Curse) as a group by dragging any child button.
+-- Stores result into <Type>MenuDecalage so the menu stays where you drop it.
+local function EnableMenuGroupDrag(menuType, menuList, headerButtonFrameName)
+    if not menuList or not menuList[1] then return end
+    local header = _G[headerButtonFrameName]
+    if not header then return end
+
+    local mover = menuList[1] -- moving this moves the whole chain
+
+    local function StartDrag()
+        if InCombatLockdown() then return end
+        mover:SetMovable(true)
+        mover:SetClampedToScreen(true)
+        mover:StartMoving()
+    end
+
+    local function StopDrag()
+        mover:StopMovingOrSizing()
+
+        if InCombatLockdown() then return end
+
+        local hx, hy = header:GetCenter()
+        local mx, my = mover:GetCenter()
+        if not (hx and hy and mx and my) then return end
+
+        local dx, dy = mx - hx, my - hy
+
+        local posKey = menuType .. "MenuPos"
+        local decKey = menuType .. "MenuDecalage"
+
+        local pos = NecrosisConfig[posKey] or { x = 1, y = 0, direction = 1 }
+        local dec = NecrosisConfig[decKey] or { x = 0, y = 0 }
+
+        local baseX = (pos.direction or 1) * (pos.x or 0) * 32
+        local baseY = (pos.y or 0) * 32
+
+        -- store only the "decalage" part (the extra nudge beyond base vector)
+        dec.x = math.floor((dx - baseX) + 0.5)
+        dec.y = math.floor((dy - baseY) + 0.5)
+
+        NecrosisConfig[decKey] = dec
+
+        -- snap back onto the proper anchor math so future rebuilds keep the same location
+        Necrosis:SetOfxy(menuType)
+    end
+
+    -- Make any button in the menu drag the group
+    for i = 1, #menuList do
+        local b = menuList[i]
+        if b then
+            b:RegisterForDrag("MiddleButton")
+            b:SetScript("OnDragStart", StartDrag)
+            b:SetScript("OnDragStop", StopDrag)
+        	AddMiddleDragTooltip(b)
+        end
+    end
+end
+
 -- Rebuild the menus at mod startup or when the spellbook changes || A chaque changement du livre des sorts, au démarrage du mod, ainsi qu'au changement de sens du menu on reconstruit les menus des sorts
 function Necrosis:CreateMenu()
 	Local.Menu.Pet = setmetatable({}, metatable)
@@ -3450,6 +3539,7 @@ function Necrosis:CreateMenu()
 			end
 			Necrosis:MenuAttribute(fs)
 			Necrosis:PetSpellAttribute()
+			EnableMenuGroupDrag("Pet", Local.Menu.Pet, Necrosis.Warlock_Buttons.pets.f)
 		end
 	end
 
@@ -3515,6 +3605,7 @@ function Necrosis:CreateMenu()
 			end
 			Necrosis:MenuAttribute(fs)
 			Necrosis:BuffSpellAttribute()
+			EnableMenuGroupDrag("Buff", Local.Menu.Buff, Necrosis.Warlock_Buttons.buffs.f)
 		end
 	end
 
@@ -3593,6 +3684,7 @@ function Necrosis:CreateMenu()
 			end
 			Necrosis:MenuAttribute(fs)
 			Necrosis:CurseSpellAttribute()
+			EnableMenuGroupDrag("Curse", Local.Menu.Curse, Necrosis.Warlock_Buttons.curses.f)
 		end
 	end
 
