@@ -2556,9 +2556,9 @@ function Necrosis:BuildButtonTooltip(button)
 				cool = " - " .. Necrosis.Utils.TimeLeft(((startTime - GetTime()) + duration))
 			end
 		end
-		GameTooltip:AddLine(color .. str2 .. cool .. "|r")
+		GameTooltip:AddLine(color .. str2 .. "|r")
 		GameTooltip:AddLine(color .. str .. cool .. "|r")
-		GameTooltip:AddLine(color .. str3 .. cool .. "|r")
+		GameTooltip:AddLine(color .. str3 .. "|r")
 		-- ..... for the shadow trance button ||..... pour le bouton de la Transe de l'ombre
 	elseif (Type == "ShadowTrance") then
 		GameTooltip:SetText(Necrosis.TooltipData[Type].Label ..
@@ -3365,7 +3365,7 @@ local function AddMiddleDragTooltip(button)
         if NecrosisConfig and NecrosisConfig.NoDragAll then
             return
         end
-		
+
         if not GameTooltip:IsShown() then
             GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
             GameTooltip:SetText(self:GetName() or "", 1, 1, 1)
