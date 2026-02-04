@@ -995,7 +995,7 @@ function Necrosis:ChangeDemon()
 				Local.Summon.DemonEnslaved = true
 				--Necrosis:Msg("ENSLAVE", "USER")
 				--[[ timer should have been put in place on spell cast...
---]]
+				--]]
 			end
 		else
 			-- When the enslaved demon is lost, remove the timer and warn the warlock || Quand le démon asservi est perdu, on retire le Timer et on prévient le Démoniste
@@ -1012,8 +1012,19 @@ function Necrosis:ChangeDemon()
 
 	-- If the demon is not enslaved we define its title, and we update its name in Necrosis || Si le démon n'est pas asservi on définit son titre, et on met à jour son nom dans Necrosis
 	Local.Summon.LastDemonType = Local.Summon.DemonType
-	Local.Summon.DemonType = UnitCreatureFamily("pet") or nil
-	Local.Summon.DemonId = Necrosis.Utils.ParseGUID(UnitGUID("pet")) or nil
+
+	local petExists            = UnitExists("pet")
+	local petAlive             = petExists and not UnitIsDead("pet")
+
+	if petAlive then
+		Local.Summon.DemonType = UnitCreatureFamily("pet") or nil
+		Local.Summon.DemonId   = Necrosis.Utils.ParseGUID(UnitGUID("pet")) or nil
+	else
+		-- Pet is gone OR dead (eg. Demonic Sacrifice). Treat as no demon for highlight purposes.
+		Local.Summon.DemonType = nil
+		Local.Summon.DemonId   = nil
+	end
+
 
 	local high = nil
 	for i = 1, #Necrosis.Warlock_Lists.pets, 1 do -- pets + but we'll only match normal pets
@@ -1021,7 +1032,7 @@ function Necrosis:ChangeDemon()
 		local f = _G[fn]
 		local spell = Necrosis.GetSpell(Necrosis.Warlock_Lists.pets[i].high_of)
 		if f and spell.PetId then
-			if tonumber(Local.Summon.DemonId) == spell.PetId then
+			if petAlive and tonumber(Local.Summon.DemonId) == spell.PetId then
 				NecrosisConfig.PetInfo[Necrosis.Warlock_Lists.pets[i].high_of] = UnitName("pet")
 				high = spell.PetId -- only expect one
 				f:LockHighlight()
@@ -1031,17 +1042,32 @@ function Necrosis:ChangeDemon()
 		end
 	end
 	Necrosis:UpdateMana()
+	-- Re-apply pet menu secure attributes so shift-sacrifice follows the current demon
+	Necrosis:PetSpellAttribute()
+
+	-- If ClosingMenu is OFF, do not let "summon finished" refresh collapse the Pet Menu.
+	-- Only reopen if it was opened normally (not right-click held open).
+	if not InCombatLockdown()
+		and NecrosisConfig and not NecrosisConfig.ClosingMenu
+		and Necrosis._KeepPetMenuOpen
+	then
+		local petHeader = _G[Necrosis.Warlock_Buttons.pets.f]
+		if petHeader and petHeader:GetAttribute("state") == "Ferme" then
+			petHeader:SetAttribute("state", "Ouvert")
+		end
+	end
+	Necrosis._KeepPetMenuOpen = nil
+
 
 	--[[
-_G["DEFAULT_CHAT_FRAME"]:AddMessage("ChangeDemon"
-.." ld'"..tostring(Local.Summon.LastDemonType).."'"
-.." dt'"..tostring(Local.Summon.DemonType).."'"
-.." di'"..tostring(Local.Summon.DemonId).."'"
-.." hi'"..tostring(high).."'"
-.." up'"..tostring(UnitName("pet")).."'"
-)
---]]
-	return
+	_G["DEFAULT_CHAT_FRAME"]:AddMessage("ChangeDemon"
+	.." ld'"..tostring(Local.Summon.LastDemonType).."'"
+	.." dt'"..tostring(Local.Summon.DemonType).."'"
+	.." di'"..tostring(Local.Summon.DemonId).."'"
+	.." hi'"..tostring(high).."'"
+	.." up'"..tostring(UnitName("pet")).."'"
+	)
+	--]]
 end
 
 local function SetupSpells(reason)
@@ -1673,8 +1699,17 @@ function Necrosis:OnEvent(self, event, ...)
 		Necrosis:UpdateMana()
 		Necrosis:UpdateMenuItemDesaturation()
 		-- If the player wins or loses his life || Si le joueur gagneou perd de la vie
-	elseif (event == "UNIT_HEALTH") and arg1 == "player" then
-		Necrosis:UpdateHealth()
+	elseif (event == "UNIT_HEALTH") and (arg1 == "player" or arg1 == "pet") then
+		if arg1 == "player" then
+			Necrosis:UpdateHealth()
+		elseif arg1 == "pet" then
+			-- When a pet dies (eg. Demonic Sacrifice), UNIT_PET may not fire immediately.
+			-- Force a demon refresh so the highlight clears right away.
+			if UnitExists("pet") and UnitIsDead("pet") then
+				Necrosis:ChangeDemon()
+			end
+		end
+
 		-- If the player dies || Si le joueur meurt
 	elseif (event == "PLAYER_DEAD") then
 		-- It may hide the Twilight or Backlit buttons. || On cache éventuellement les boutons de Crépuscule ou Contrecoup.
@@ -2220,12 +2255,33 @@ local function AddDestroyCount()
 	end
 end
 
-local function AddDominion(start, duration)
-	if not (start > 0 and duration > 0) then
-		GameTooltip:AddLine(Necrosis.TooltipData.DominationCooldown)
-		GameTooltip:AddLine(Necrosis.TooltipData.DominationCooldown2)
-	end
+local function AddDominion(demonUsage, start, duration)
+    -- Keep the existing "Domination cooldown" hint behavior as-is
+    if not (start > 0 and duration > 0) then
+        GameTooltip:AddLine(Necrosis.TooltipData.DominationCooldown)
+    end
+
+    -- Show "Shift-Click to Sacrifice" ONLY on the currently summoned + alive demon's button
+    if not (NecrosisConfig.PetShow and NecrosisConfig.PetShow[11]) then return end
+    if not Necrosis.IsSpellKnown("sacrifice") then return end
+    if not UnitExists("pet") or UnitIsDead("pet") then return end
+
+    local spell = Necrosis.GetSpell(demonUsage)
+    if not (spell and spell.PetId) then return end
+
+    local petGuid = UnitGUID("pet")
+    if not petGuid then return end
+
+    local _, _, _, _, _, npcId = strsplit("-", petGuid)
+    npcId = tonumber(npcId)
+    if npcId and npcId == tonumber(spell.PetId) then
+        -- Desaturated gray hint
+        GameTooltip:AddLine(Necrosis.TooltipData.DominationCooldown2, 0.65, 0.65, 0.65)
+    end
 end
+
+
+
 local function AddMenuTip(Type)
 	-- Automatic menu info in combat
 	if Local.PlayerInCombat and NecrosisConfig.AutomaticMenu then
@@ -2684,17 +2740,17 @@ function Necrosis:BuildButtonTooltip(button)
 			GameTooltip:AddLine("Cooldown : " .. affiche)
 		end
 	elseif (Type == "Imp") then
-		AddCastAndCost("imp"); AddDominion(start, duration)
+		AddCastAndCost("imp"); AddDominion("imp", start, duration)
 	elseif (Type == "Voidwalker") then
-		AddCastAndCost("voidwalker"); AddShard(); AddDominion(start, duration)
+		AddCastAndCost("voidwalker"); AddShard(); AddDominion("voidwalker", start, duration)
 	elseif (Type == "Succubus") then
-		AddCastAndCost("succubus"); AddShard(); AddDominion(start, duration)
+		AddCastAndCost("succubus"); AddShard(); AddDominion("succubus", start, duration)
 	elseif (Type == "Inccubus") then
-		AddCastAndCost("inccubus"); AddShard(); AddDominion(start, duration)
+		AddCastAndCost("inccubus"); AddShard(); AddDominion("incubus", start, duration)
 	elseif (Type == "Felhunter") then
-		AddCastAndCost("felhunter"); AddShard(); AddDominion(start, duration)
+		AddCastAndCost("felhunter"); AddShard(); AddDominion("felhunter", start, duration)
 	elseif (Type == "Felguard") then
-		AddCastAndCost("felguard"); AddShard(); AddDominion(start, duration)
+		AddCastAndCost("felguard"); AddShard(); AddDominion("felguard", start, duration)
 	elseif (Type == "Infernal") then
 		AddCastAndCost("inferno"); AddInfernalReagent()
 	elseif (Type == "Doomguard") then
@@ -3715,17 +3771,21 @@ function Necrosis:ApplyClosingMenuSetting()
 	end
 
 	local function SafeWrap(parent, child)
-		if parent and child then
-			-- prevent double-wrapping
-			SafeUnwrap(parent, child)
+	if parent and child then
+		-- Ensure exactly one wrapper
+		SafeUnwrap(parent, child)
 
-			parent:WrapScript(child, "OnClick", [[
+		parent:WrapScript(child, "OnClick", [[
+			-- Close only if the header says closing is enabled
+			if self:GetParent():GetAttribute("close_on_click") then
 				if self:GetParent():GetAttribute("state") == "Ouvert" then
 					self:GetParent():SetAttribute("state", "Ferme")
 				end
-			]])
-		end
+			end
+		]])
 	end
+end
+
 
 	-- menu headers on the sphere
 	local headers = {
@@ -3735,24 +3795,24 @@ function Necrosis:ApplyClosingMenuSetting()
 	}
 
 	for _, H in ipairs(headers) do
-		local menuBtn = _G[H.header]
-		if menuBtn and H.list then
-			for i = 1, #H.list do
-				local entry = H.list[i]
-				local btnInfo = entry and Necrosis.Warlock_Buttons[entry.f_ptr]
-				local child = btnInfo and _G[btnInfo.f]
+	local menuBtn = _G[H.header]
+	if menuBtn and H.list then
+		-- Toggle close behavior via secure attribute (fast, no wrapper stacking)
+		local enableClose = (not NecrosisConfig.BlockedMenu) and NecrosisConfig.ClosingMenu
+		menuBtn:SetAttribute("close_on_click", enableClose and true or nil)
 
-				if child then
-					-- BlockedMenu OR ClosingMenu disabled => do NOT close on click
-					if NecrosisConfig.BlockedMenu or not NecrosisConfig.ClosingMenu then
-						SafeUnwrap(menuBtn, child)
-					else
-						SafeWrap(menuBtn, child)
-					end
-				end
+		for i = 1, #H.list do
+			local entry = H.list[i]
+			local btnInfo = entry and Necrosis.Warlock_Buttons[entry.f_ptr]
+			local child = btnInfo and _G[btnInfo.f]
+
+			if child then
+				-- Always keep exactly one wrapper; wrapper decides whether to close
+				SafeWrap(menuBtn, child)
 			end
 		end
 	end
+end
 end
 
 -- Reset Necrosis to default position || Fonction pour ramener tout au centre de l'écran

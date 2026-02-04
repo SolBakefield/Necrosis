@@ -552,6 +552,54 @@ end)
 			end)
 
 
+		-- Show / Hide Demonic Sacrifice (TBC)
+			frame = CreateFrame("CheckButton", "NecrosisDemonShowSacrifice", NecrosisMenusConfig3, "UICheckButtonTemplate")
+			frame:EnableMouse(true)
+			frame:SetWidth(24)
+			frame:SetHeight(24)
+			frame:Show()
+			frame:ClearAllPoints()
+					
+			-- put it one line below Subjugation
+			frame:SetPoint("LEFT", NecrosisMenusConfig3, "BOTTOMLEFT", 250, (120 + 5*18))
+					
+			frame.text = _G["NecrosisDemonShowSacrifice".."Text"]
+			frame.text:SetText(Necrosis.GetSpellCastName("sacrifice") or "Demonic Sacrifice")
+			frame:SetText(Necrosis.GetSpellCastName("sacrifice") or "Demonic Sacrifice")
+					
+			-- Pet menu index 11 is sacrifice
+			NecrosisConfig.PetShow[11] = (NecrosisConfig.PetShow[11] ~= false) -- default true unless explicitly false
+			frame:SetChecked(NecrosisConfig.PetShow[11])
+					
+			frame:SetScript("OnClick", function(self)
+			    NecrosisConfig.PetShow[11] = self:GetChecked() and true or false
+			    Necrosis:CreateMenu()
+			end)
+
+		-- Show / Hide Fel Domination (TBC)
+			frame = CreateFrame("CheckButton", "NecrosisDemonShowFelDom", NecrosisMenusConfig3, "UICheckButtonTemplate")
+			frame:EnableMouse(true)
+			frame:SetWidth(24)
+			frame:SetHeight(24)
+			frame:Show()
+			frame:ClearAllPoints()
+					
+			-- put it one line below Subjugation
+			frame:SetPoint("LEFT", NecrosisMenusConfig3, "BOTTOMLEFT", 50, (100 + 5*18))
+					
+			frame.text = _G["NecrosisDemonShowFelDom".."Text"]
+			frame.text:SetText(Necrosis.GetSpellCastName("domination") or "Fel Domination")
+			frame:SetText(Necrosis.GetSpellCastName("domination") or "Fel Domination")
+					
+			-- Pet menu index 11 is sacrifice
+			NecrosisConfig.PetShow[9] = (NecrosisConfig.PetShow[9] ~= false) -- default true unless explicitly false
+			frame:SetChecked(NecrosisConfig.PetShow[9])
+					
+			frame:SetScript("OnClick", function(self)
+			    NecrosisConfig.PetShow[9] = self:GetChecked() and true or false
+			    Necrosis:CreateMenu()
+			end)
+
 	
 	
 		

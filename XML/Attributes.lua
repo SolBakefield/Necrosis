@@ -100,9 +100,14 @@ function Necrosis:MenuAttribute(menu)
 
 
 	-- run at OnLoad of button
-	menuButton:Execute([[
+			menuButton:Execute([[
 		ButtonList = table.new(self:GetChildren())
-		if self:GetAttribute("state") == "Bloque" then
+		local st = self:GetAttribute("state")
+
+		-- IMPORTANT:
+		-- When we rebuild ButtonList (eg. after pet changes / secure refresh),
+		-- do NOT hide children if the menu is currently meant to be open.
+		if st == "Bloque" or st == "Ouvert" or st == "ClicDroit" or st == "Combat" then
 			for i, button in ipairs(ButtonList) do
 				button:Show()
 			end
@@ -112,6 +117,10 @@ function Necrosis:MenuAttribute(menu)
 			end
 		end
 	]])
+
+
+
+
 
 	menuButton:SetAttribute("_onclick", [[
     self:SetAttribute("lastClick", button)
@@ -314,21 +323,55 @@ function Necrosis:SetPetSpellAttribute(button)
 			f:SetAttribute("spell", nil)
 
 
-			--Dominiation sur clic droit
+			-- Right-click: Fel Domination (if known) + summon
 			if Necrosis.IsSpellKnown("domination") then
 				f:SetAttribute("type2", "macro")
 				local str =
 					"/cast " .. Necrosis.GetSpellCastName("domination")
 					.. "\n/stopcasting\n/cast " .. castName
-
-
 				f:SetAttribute("macrotext2", str)
-				if Necrosis.NameDemon[NecrosisConfig.NecrosisDemonSacrifice] == f.high_of
-				then
-					f:SetAttribute("shift-type2", "spell")
-					str2 = Necrosis.GetSpellCastName("sacrifice")
-					f:SetAttribute("shift-spell2", str2)
-					--print (str2)
+			else
+				-- If domination isn't known, keep right-click clean (optional: do nothing)
+				f:SetAttribute("type2", nil)
+				f:SetAttribute("macrotext2", nil)
+			end
+
+			
+
+			-- SHIFT + click: Demonic Sacrifice
+			-- Enable ONLY on the demon button that corresponds to the currently summoned (alive) pet.
+			do
+				-- Clear first (so buttons don't get "stuck")
+				f:SetAttribute("shift-type1", nil)
+				f:SetAttribute("shift-spell1", nil)
+				f:SetAttribute("shift-type2", nil)
+				f:SetAttribute("shift-spell2", nil)
+
+				-- Feature toggle: only if sacrifice menu item enabled
+				if NecrosisConfig.PetShow and NecrosisConfig.PetShow[11] then
+					local sacName = Necrosis.GetSpellCastName("sacrifice")
+					if sacName and UnitExists("pet") and not UnitIsDead("pet") then
+						local spell = Necrosis.GetSpell(f.high_of)
+						if spell and spell.PetId then
+							-- Compare against the currently summoned pet creature id
+							local petGuid = UnitGUID("pet")
+							if petGuid then
+								local _, _, _, _, _, npcId = strsplit("-", petGuid)
+								npcId = tonumber(npcId)
+
+								-- In your spell table, PetId stores the creature id for that demon
+								if npcId and npcId == tonumber(spell.PetId) then
+									-- This button represents the currently summoned demon
+									f:SetAttribute("shift-type1", "spell")
+									f:SetAttribute("shift-spell1", sacName)
+
+									-- Optional: keep shift-right too
+									f:SetAttribute("shift-type2", "spell")
+									f:SetAttribute("shift-spell2", sacName)
+								end
+							end
+						end
+					end
 				end
 			end
 		else

@@ -466,7 +466,7 @@ Notes:
 	[27273] = { UsageRank = 7, SpellRank = 7, Timer = true, Usage = "sacrifice_Void", Length = 30, NeedPet = true, }, -- R7	
 
 
-	[18788] = { UsageRank = 1, SpellRank = 1, Timer = true, Usage = "sacrifice", Length = 30, NeedPet = true, }, -- Demoniac sacrifice	
+	[18788] = { UsageRank = 1, SpellRank = 1, Timer = true, Usage = "sacrifice", Length = 0, NeedPet = true, }, -- Demoniac sacrifice	
 
 	-- buff Demonic Sacrifice
 
@@ -1012,7 +1012,7 @@ Necrosis.Warlock_Lists = {
 		----spell for pet--
 		[9]  = { f_ptr = "domination", high_of = "domination", },
 		[10] = { f_ptr = "enslave", high_of = "enslave", },
-		--[11] = {f_ptr = "sacrifice", high_of = "sacrifice", },--WOTLK disuse
+		[11] = {f_ptr = "sacrifice", high_of = "sacrifice", },--WOTLK disuse
 		--
 
 	},
@@ -1105,14 +1105,6 @@ Necrosis.Warlock_Lists = {
 		greater_spell       = { id = 13602, }, -- Greater Spellstone
 		major_spell         = { id = 13603, }, -- Major Spellstone
 		master_spell        = { id = 22646, }, -- Master Spellstone
-
-		-- Wrath-style consumable spellstones (kept for compatibility)
-		wotlk_spell         = { id = 41191, }, --
-		wotlk_greater_spell = { id = 41192, }, --
-		wotlk_major_spell   = { id = 41193, }, --
-		wotlk_master_spell  = { id = 41194, }, --
-		wotlk_demonic_spell = { id = 41195, }, --
-		wotlk_grand_spell   = { id = 41196, }, --
 	},
 	["fire_stones"] = {
 		-- TBC Classic / Anniversary (equippable firestones)
@@ -1121,15 +1113,6 @@ Necrosis.Warlock_Lists = {
 		greater_fire       = { id = 13700, }, -- Greater Firestone
 		major_fire         = { id = 13701, }, -- Major Firestone
 		master_fire        = { id = 22128, }, -- Master Firestone
-
-		-- Wrath-style consumable firestones (kept for compatibility)
-		wotlk_lesser_fire  = { id = 41170, }, --
-		wotlk_fire         = { id = 41169, }, --
-		wotlk_greater_fire = { id = 41171, }, --
-		wotlk_major_fire   = { id = 41172, }, --
-		wotlk_master_fire  = { id = 40773, }, --
-		wotlk_fel_fire     = { id = 41173, }, --
-		wotlk_grand_fire   = { id = 41174, }, --
 	},
 	["auras"] = {                      -- buffs and debuffs
 		fear_ward    = { id = 19337, }, -- Dwarf priest racial trait
