@@ -112,7 +112,7 @@ and crosses login / reload does NOT have both a duration AND a cool down in Spel
 local function InsertThisTimer(spell, cast_guid, Target, Timer, start_time, duration, note)
 	-- 
 	-- print ("insert the timer ",spell, cast_guid, Target, Timer, start_time, duration, note)
-	 
+
 	local target = Target
 	local ttype = 0
 	if target == nil or target == {} then
@@ -121,11 +121,17 @@ local function InsertThisTimer(spell, cast_guid, Target, Timer, start_time, dura
 
 	local length = 0
 	local length_max = 0
+
+	-- Track whether we actually inserted a NEW timer entry.
+	-- Some spells (eg. Demonic Sacrifice 18788) have Length = 0, and the old code would still
+	-- allocate a graphical bar and attach it to the *previous* timer, creating a phantom overlay bar.
+	local insertedIndex = nil
+
 	if spell.Length and spell.Length > 0 then
 		if start_time then
 			length = floor(duration - GetTime() + start_time)
 			length_max = floor(start_time + duration)
-		else 
+		else
 			length = spell.Length
 			length_max = floor(GetTime() + spell.Length)
 		end
@@ -135,7 +141,7 @@ local function InsertThisTimer(spell, cast_guid, Target, Timer, start_time, dura
 		else
 			ttype = 6 -- remove once out of combat
 		end
-			
+
 		-- insert an entry into the table || Insertion de l'entrée dans le tableau
 		Timer.SpellTimer:insert(
 			{
@@ -153,21 +159,21 @@ local function InsertThisTimer(spell, cast_guid, Target, Timer, start_time, dura
 				Gtimer = nil
 			}
 		)
-		
-		OutputTimer("Insert", spell.Usage, #Timer.SpellTimer, Timer, note)
-		
+
+		insertedIndex = #Timer.SpellTimer
+		OutputTimer("Insert", spell.Usage, insertedIndex, Timer, note)
 	end
-	
+
 	-- check for a cool down to show
 	if spell.Cooldown and (spell.Cooldown > 0) then
 		if start_time then
 			length = floor(duration - GetTime() + start_time)
 			length_max = floor(start_time + duration)
-		else 
+		else
 			length = spell.Cooldown
 			length_max = floor(GetTime() + spell.Cooldown)
 		end
-		
+
 		Timer = Necrosis:RetraitTimerParNom(spell.Name, Timer, "Remove cool down")
 		-- insert an entry into the table || Insertion de l'entrée dans le tableau
 		Timer.SpellTimer:insert(
@@ -186,14 +192,21 @@ local function InsertThisTimer(spell, cast_guid, Target, Timer, start_time, dura
 				Gtimer = nil
 			}
 		)
-		OutputTimer("Insert Cool down", spell.Usage, #Timer.SpellTimer, Timer, note)
+
+		insertedIndex = #Timer.SpellTimer
+		OutputTimer("Insert Cool down", spell.Usage, insertedIndex, Timer, note)
+	end
+
+	-- If we did NOT insert a new timer entry (Length=0 and no Cooldown), do nothing further.
+	if not insertedIndex then
+		return Timer
 	end
 
 	-- attach a graphical timer if enabled || Association d'un timer graphique au timer
 	-- associate it to the frame (if present) || Si il y a une frame timer de libérée, on l'associe au timer
 	if NecrosisConfig.TimerType == 1 then -- si timer graphics
-		
-	    local TimerLibre = nil
+
+		local TimerLibre = nil
 		for index, valeur in ipairs(Timer.TimerTable) do
 			if not valeur then
 				TimerLibre = index
@@ -201,30 +214,24 @@ local function InsertThisTimer(spell, cast_guid, Target, Timer, start_time, dura
 				break
 			end
 		end
-		-- Si il n'y a pas de frame de libérée, on rajoute une frame || if there is no frame, add one 
+		-- Si il n'y a pas de frame de libérée, on rajoute une frame || if there is no frame, add one
 		if not TimerLibre then
 			Timer.TimerTable:insert(true)
 			TimerLibre = #Timer.TimerTable
 		end
-		-- update the timer display || Association effective au timer
-		Timer.SpellTimer[#Timer.SpellTimer].Gtimer = TimerLibre
-		local spellTexture = GetSpellTexture(spell.ID)		
-		--print (spellTexture,"spell",spell.ID,spell.Name)
-		local FontString, StatusBar , Icon_Spell = Necrosis:AddFrame("NecrosisTimerFrame"..TimerLibre,spellTexture)
-		--print("update:",spellTexture)
-		FontString:SetText(Timer.SpellTimer[#Timer.SpellTimer].Name)
 
-		--print("icon ", GetSpellTexture(spell.ID), spell.Name,"NecrosisTimerFrame"..TimerLibre)
-		
-		
+		-- update the timer display || Association effective au timer
+		Timer.SpellTimer[insertedIndex].Gtimer = TimerLibre
+		local spellTexture = GetSpellTexture(spell.ID)
+
+		local FontString, StatusBar, Icon_Spell = Necrosis:AddFrame("NecrosisTimerFrame"..TimerLibre, spellTexture)
+		FontString:SetText(Timer.SpellTimer[insertedIndex].Name)
+
 		StatusBar:SetMinMaxValues(
-			Timer.SpellTimer[#Timer.SpellTimer].TimeMax - Timer.SpellTimer[#Timer.SpellTimer].Time,
-			Timer.SpellTimer[#Timer.SpellTimer].TimeMax - Timer.SpellTimer[#Timer.SpellTimer].Time + Timer.SpellTimer[#Timer.SpellTimer].MaxBar
+			Timer.SpellTimer[insertedIndex].TimeMax - Timer.SpellTimer[insertedIndex].Time,
+			Timer.SpellTimer[insertedIndex].TimeMax - Timer.SpellTimer[insertedIndex].Time + Timer.SpellTimer[insertedIndex].MaxBar
 		)
 		statusMin, statusMax = StatusBar:GetMinMaxValues()
-		--print (statusMin, statusMax,statusMax-statusMin,StatusBar:GetValue(),Timer.SpellTimer[#Timer.SpellTimer].MaxBar)
-		
-		
 	end
 
 	if NecrosisConfig.TimerType > 0 then
@@ -240,6 +247,7 @@ local function InsertThisTimer(spell, cast_guid, Target, Timer, start_time, dura
 
 	return Timer
 end
+
 
 function Necrosis:TimerInsert(Cast, Target, Timer, note, start_time, duration, maxi)
 	local spell = Necrosis.GetSpell(Cast.usage) 

@@ -466,7 +466,7 @@ Notes:
 	[27273] = { UsageRank = 7, SpellRank = 7, Timer = true, Usage = "sacrifice_Void", Length = 30, NeedPet = true, }, -- R7	
 
 
-	[18788] = { UsageRank = 1, SpellRank = 1, Timer = true, Usage = "sacrifice", Length = 0, NeedPet = true, }, -- Demoniac sacrifice	
+	[18788] = { UsageRank = 1, SpellRank = 1, Timer = false, Usage = "sacrifice", NeedPet = true, }, -- Demoniac sacrifice	
 
 	-- buff Demonic Sacrifice
 

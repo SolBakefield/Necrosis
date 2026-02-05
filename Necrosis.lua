@@ -1351,15 +1351,15 @@ function Necrosis:UpdateSpecialMenuTimes()
 				end
 			end
 
-			if remaining and remaining > 0 then
-				if remaining >= 60 then
-					f.timer_text:SetText(string.format("%dm", math.floor(remaining / 60)))
-				else
-					f.timer_text:SetText(tostring(math.floor(remaining + 0.5)))
-				end
-			else
-				f.timer_text:SetText("")
-			end
+			-- if remaining and remaining > 0 then
+			-- 	if remaining >= 60 then
+			-- 		f.timer_text:SetText(string.format("%dm", math.floor(remaining / 60)))
+			-- 	else
+			-- 		f.timer_text:SetText(tostring(math.floor(remaining + 0.5)))
+			-- 	end
+			-- else
+			-- 	f.timer_text:SetText("")
+			-- end
 		end
 	end
 end
@@ -1609,6 +1609,26 @@ function Necrosis:UpdateMenuItemDesaturation()
 			end
 		end
 	end
+
+			-- Shadow Ward:
+		-- - Desaturate the icon while the spell is on cooldown (IsUsableSpell() doesn't cover cooldown)
+		do
+			local f = _G["NecrosisBuffMenu07"] -- Shadow Ward button
+			if f then
+				local tex = f:GetNormalTexture()
+				local sid = Necrosis.Warlock_Spell_Use and Necrosis.Warlock_Spell_Use["ward"]
+				local sp = sid and Necrosis.Warlock_Spells and Necrosis.Warlock_Spells[sid]
+				if tex and sp and sp.ID then
+					local remain = (Necrosis.Utils and Necrosis.Utils.GetSpellCooldown and Necrosis.Utils.GetSpellCooldown(sp.ID)) or 0
+					if remain > 0 then
+						tex:SetDesaturated(true)
+						tex:SetVertexColor(0.45, 0.45, 0.45)
+					end
+					-- NOTE: If not on cooldown, do nothing here so the generic "usable/no mana" logic remains in control.
+				end
+			end
+		end
+
 end
 
 --[[ Function started according to the intercepted event || Fonction lancée selon l'événement intercepté
@@ -2404,6 +2424,7 @@ function Necrosis:BuildButtonTooltip(button)
 	end
 
 	local remaining = Necrosis.Utils.GetSpellCooldown(18708)
+	local remaining2 = Necrosis.Utils.GetSpellCooldown(6229)
 
 	-- Creating help bubbles .... ||Création des bulles d'aides....
 	GameTooltip:SetOwner(button, anchor)
@@ -2720,11 +2741,8 @@ function Necrosis:BuildButtonTooltip(button)
 		AddCastAndCost("link")
 	elseif (Type == "ShadowProtection") then
 		AddCastAndCost("ward")
-		if start2 > 0 and duration2 > 0 then
-			local seconde = duration2 - (GetTime() - start2)
-			local affiche
-			affiche = tostring(floor(seconde)) .. " sec"
-			GameTooltip:AddLine("Cooldown : " .. affiche)
+		if remaining2 > 0 then
+			GameTooltip:AddLine("|CFF808080" .. "Cooldown: " .. Necrosis.Utils.FormatCooldownTime(remaining2) .. "|r")
 		end
 	elseif (Type == "Domination") then
 		-- Always show the spell info (like other pet buttons), even if not on cooldown
