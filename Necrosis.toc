@@ -7,14 +7,14 @@
 ## Notes: Warlock UI & Shard Management
 ## Notes-frFR: Gestion graphique des shards, interface Démoniste, ban , asservir 
 ## Notes-ruRU: Менеджер заклинаний, камней и демонов для чернокнижника.
-## Version: 0.1 BCCA
+## Version: @0.1.1@
+## X-Curse-Project-ID: 1453527
 ## Author: Shadrizz aka SolBakefield
 ## Website: https://github.com/SolBakefield/Necrosis
 ## DefaultState: Enabled
 ## X-Original-Author: Lomig,lädygaga - sulfuron EUR - As lancestre
 ## X-Localizations: enUS, enGB, deDE, frFR, koKR, zhCN, zhTW, esES, ruRU
 ## X-Category: Warlock
-## X-Curse-Project-ID: 1453527
 ## LoadOnDemand: 0
 ## SavedVariablesPerCharacter: NecrosisConfig
 

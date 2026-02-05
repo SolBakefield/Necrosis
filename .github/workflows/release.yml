@@ -1,0 +1,27 @@
+name: Package & Publish (CurseForge)
+
+on:
+  push:
+    tags:
+      - "*"
+    paths-ignore:
+      - '.github/**'
+      - '.gitignore'
+      - 'pkgmeta.pkgmeta'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Package and upload
+        uses: BigWigsMods/packager@master
+        with:
+          # -n controls the produced zip file name template
+          # This yields: Necrosis-0.1-BCCA.zip, Necrosis-0.2-BCCA.zip, etc.
+          args: -n "Necrosis-{project-version}-BCCA"
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
