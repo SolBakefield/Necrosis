@@ -69,20 +69,40 @@ _G["DEFAULT_CHAT_FRAME"]:AddMessage("NU.GetItemInfo"
 end
 
 --[[
- Get spell cooldown info, return only what we want
- At times, at some initial logins, it seems this returns nil...
+ Get spell cooldown info and return remaining duration as seconds
 --]]
-function Necrosis.Utils.GetSpellCooldown(id, place)
-	local start, duration, enabled, modRate 
-	= GetSpellCooldown(id, place)
-	-- only some parameters are needed or even used in Classic
-
-	if start and duration then
-		return start, duration
-	else
-		return 0, 0 -- assume it is ready
-	end
+function Necrosis.Utils.GetSpellCooldown(spellNameOrId)
+	local start, duration = GetSpellCooldown(spellNameOrId)
+  if type(start) ~= "number" or type(duration) ~= "number" then
+    return 0
+  end
+  if start <= 0 or duration <= 0 then
+    return 0
+  end
+  local remaining = start + duration - GetTime()
+  return remaining > 0 and remaining or 0
 end
+
+--[[
+ Convert seconds to MM:SS format
+--]]
+function Necrosis.Utils.FormatCooldownTime(seconds)
+  if not seconds or seconds <= 0 then
+    return "0"
+  end
+
+  seconds = math.floor(seconds)
+
+  if seconds < 60 then
+    return tostring(seconds)
+  end
+
+  local minutes = math.floor(seconds / 60)
+  local secs = seconds % 60
+
+  return string.format("%d:%02d", minutes, secs)
+end
+
 
 --[[
  Get bag info, return only what we want

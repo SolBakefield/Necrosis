@@ -2255,9 +2255,18 @@ local function AddDestroyCount()
 	end
 end
 
-local function AddDominion(demonUsage, start, duration)
-    -- Keep the existing "Domination cooldown" hint behavior as-is
-    if not (start > 0 and duration > 0) then
+local function AddDominion(demonUsage, remaining)
+    -- Show Fel Domination hint. When it's on cooldown, append remaining time (gray).
+    if remaining > 0 then
+
+        GameTooltip:AddLine(
+            "|CFF808080" ..
+            Necrosis.TooltipData.DominationCooldown ..
+            " - " .. Necrosis.Utils.TimeLeft(remaining) ..
+            "|r"
+        )
+    else
+        -- Off cooldown (ready)
         GameTooltip:AddLine(Necrosis.TooltipData.DominationCooldown)
     end
 
@@ -2279,6 +2288,7 @@ local function AddDominion(demonUsage, start, duration)
         GameTooltip:AddLine(Necrosis.TooltipData.DominationCooldown2, 0.65, 0.65, 0.65)
     end
 end
+
 
 
 
@@ -2393,8 +2403,7 @@ function Necrosis:BuildButtonTooltip(button)
 		-- use the anchor already grabbed
 	end
 
-	local start, duration   = Necrosis.Utils.GetSpellCooldown("domination", "spell")
-	local start2, duration2 = Necrosis.Utils.GetSpellCooldown("ward", "spell")
+	local remaining = Necrosis.Utils.GetSpellCooldown(18708)
 
 	-- Creating help bubbles .... ||Création des bulles d'aides....
 	GameTooltip:SetOwner(button, anchor)
@@ -2719,38 +2728,22 @@ function Necrosis:BuildButtonTooltip(button)
 		end
 	elseif (Type == "Domination") then
 		-- Always show the spell info (like other pet buttons), even if not on cooldown
-		AddCastAndCost("domination")
-
 		-- Then add cooldown line if active
-		if start > 0 and duration > 0 then
-			local seconde = duration - (GetTime() - start)
-			local affiche, minute, time
-			if seconde <= 59 then
-				affiche = tostring(floor(seconde)) .. " sec"
-			else
-				minute = tostring(floor(seconde / 60))
-				seconde = mod(seconde, 60)
-				if seconde <= 9 then
-					time = "0" .. tostring(floor(seconde))
-				else
-					time = tostring(floor(seconde))
-				end
-				affiche = minute .. ":" .. time
-			end
-			GameTooltip:AddLine("Cooldown : " .. affiche)
+		if remaining > 0 then
+			GameTooltip:AddLine("Cooldown: " .. Necrosis.Utils.TimeLeft(remaining))
 		end
 	elseif (Type == "Imp") then
-		AddCastAndCost("imp"); AddDominion("imp", start, duration)
+		AddCastAndCost("imp"); AddDominion("imp", remaining)
 	elseif (Type == "Voidwalker") then
-		AddCastAndCost("voidwalker"); AddShard(); AddDominion("voidwalker", start, duration)
+		AddCastAndCost("voidwalker"); AddShard(); AddDominion("voidwalker", remaining)
 	elseif (Type == "Succubus") then
-		AddCastAndCost("succubus"); AddShard(); AddDominion("succubus", start, duration)
+		AddCastAndCost("succubus"); AddShard(); AddDominion("succubus", remaining)
 	elseif (Type == "Inccubus") then
-		AddCastAndCost("inccubus"); AddShard(); AddDominion("incubus", start, duration)
+		AddCastAndCost("inccubus"); AddShard(); AddDominion("incubus", remaining)
 	elseif (Type == "Felhunter") then
-		AddCastAndCost("felhunter"); AddShard(); AddDominion("felhunter", start, duration)
+		AddCastAndCost("felhunter"); AddShard(); AddDominion("felhunter", remaining)
 	elseif (Type == "Felguard") then
-		AddCastAndCost("felguard"); AddShard(); AddDominion("felguard", start, duration)
+		AddCastAndCost("felguard"); AddShard(); AddDominion("felguard", remaining)
 	elseif (Type == "Infernal") then
 		AddCastAndCost("inferno"); AddInfernalReagent()
 	elseif (Type == "Doomguard") then
@@ -2897,28 +2890,7 @@ _G["DEFAULT_CHAT_FRAME"]:AddMessage("Necrosis:UpdateMana"
 	end
 
 
-	-- Spell interactions
-	-----------------------------------------------
-	-- If corrupt domination cooldown is gray || Si cooldown de domination corrompue on grise
-	local usage = "domination" -- 15
-	if Necrosis.IsSpellKnown(usage) then
-		local f = _G[Necrosis.Warlock_Buttons[usage].f]
-
-		local spell = Necrosis.GetSpell(usage)
-		if f and not Local.BuffActif.Domination then
-			--[[
-_G["DEFAULT_CHAT_FRAME"]:AddMessage("Necrosis:UpdateMana"
-.." i'"..(tostring(spell.ID))..'"'
-)
---]]
-			local start, duration = Necrosis.Utils.GetSpellCooldown(spell.ID, "spell")
-			if start and start > 0 and duration and duration > 0 then
-				SetSat(f, 1)
-			else
-				SetSat(f, nil)
-			end
-		end
-	end
+	
 
 	-- If shadow guardian cooldown we gray || Si cooldown de gardien de l'ombre on grise
 	-- removing, no idea what this is!?
